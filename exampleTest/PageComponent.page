@@ -1,0 +1,4 @@
+<apex:page controller="ControllerTemp">
+     <c:CompTableObject sObjectName="{!objectName}" listFields="{!listFields}" fieldSetName="aveh1__SF_To_Show" filterCondition="aveh1__Price__c,=,12" recordNumber="2" startPage="1" listActions="{!listActions}"/>
+    <!--<c:CompInfoObject idObject="a00d0000008ei0JAAQ"/>-->
+</apex:page>
