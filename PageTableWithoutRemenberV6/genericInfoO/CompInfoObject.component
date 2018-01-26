@@ -1,0 +1,29 @@
+<apex:component controller="ControllerInfoObject" access="global" allowDML="true">
+  <apex:attribute access="global" name="idObject" type="String" default="" assignTo="{!searchById}" required="false" description="This is a specific id of a object"/>
+    <style type="text/css">
+        .italicText { font-weight:bold; color:blue;}
+        [id*=myId] { font-weight: bold; color:green; }
+    </style>
+    <apex:messages />
+    <apex:form >
+        <apex:pageBlock title="Object: {!objectLabel}" id="mainInfo" rendered="{!resultObject != null}">
+            <apex:pageBlockSection >
+                <apex:outputPanel rendered="{!resultObject != null}" id="infoPanel">
+                    <apex:outputText value="Type: {!objectType}" styleClass="italicText"/>
+                    <br/>                    
+                    <apex:repeat value="{!fields}" var="field">                     
+                        <apex:outputText value="{!mapFieldLabel[field]}: " id="myId"/>
+                        <apex:outputField value="{!resultObject[field]}">
+                            <apex:inlineEditSupport event="ondblclick" showOnEdit="updateButtom, cancelButton"/>
+                        </apex:outputField>
+                        <br/>                        
+                    </apex:repeat>
+                </apex:outputPanel>
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons >
+                <apex:commandButton id="updateButtom" value="Save" action="{!saveObject}" reRender="mainInfo"/>
+                <apex:commandButton id="cancelButton" value="Cancel" action="{!calcelObject}" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+</apex:component>

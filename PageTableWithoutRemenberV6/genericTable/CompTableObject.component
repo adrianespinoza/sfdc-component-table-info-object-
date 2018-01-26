@@ -1,0 +1,157 @@
+<apex:component controller="ControllerTableObject" access="global" allowDML="true">
+    <apex:attribute access="global" name="sObjectName" type="String" required="true" assignTo="{!sObjectName}" description="This is a generic object"/>
+    <apex:attribute access="global" name="listFields" type="String[]" required="true" assignTo="{!sObjectFields}" description="This is a field list"/>
+    <apex:attribute access="global" name="fieldSetName" type="String" required="false" assignTo="{!fieldSetName}" description="This is a fieldset name"/>
+    <apex:attribute access="global" name="recordNumber" type="Integer" required="true" assignTo="{!recordNumber}" description="This is a record number"/>
+    <apex:attribute access="global" name="listActions" type="ActionButton[]" required="false" assignTo="{!listActions}" description="This is an action list of buttoms"/>
+    <apex:attribute access="global" name="filterCondition" type="String" required="false" assignTo="{!filterCondition}" description="This data will be used to filter information"/>
+    <apex:attribute access="global" name="startPage" type="Integer" required="true" assignTo="{!startPage}" description="This is a start page number"/>
+    <apex:attribute access="global" name="showDefaultButton" type="Boolean" required="false" assignTo="{!showDefaultButton}" description="This ability the default button"/>
+        
+    <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" />
+        
+        <apex:form id="mainForm">
+            <apex:pageBlock id="mainTable" title="{!objectNameLabel}" rendered="{!IF(resultObject.size > 0 , true , false)}">
+                    <apex:outputText value="{!myMessage}"></apex:outputText>
+                    <apex:pageBlockSection >
+                        <apex:outputPanel layout="block" id="optionSearch">
+                            <apex:actionRegion >
+                                <apex:inputText id="critery" value="{!restQuery}"/>
+                                <apex:commandButton value="Buscar" action="{!searchByCritery}" reRender="mainTable"/>
+                            </apex:actionRegion>
+                        </apex:outputPanel>
+                    </apex:pageBlockSection>
+                     <apex:pageBlockTable value="{!resultObject}" var="rowItem">
+                            <apex:column >
+                                <apex:facet name="header">
+                                    <apex:outputPanel >
+                                        <input type="checkbox" onClick="checkAll(this);" title="Select/Unselect All" />
+                                    </apex:outputPanel>
+                                </apex:facet>
+                                <input type="checkbox" idrec="{!rowItem['Id']}" /> 
+                            </apex:column>
+                            <apex:repeat value="{!sObjectFields}" var="colItem">
+                                <apex:column >
+                                    <apex:facet name="header" > 
+                                        <apex:outputPanel >
+                                            <apex:actionRegion >
+                                                <apex:commandLink value="{!mapFieldToShow[colItem]}{!IF(colItem==sortField,IF(sortDirection='ASC','?','?'),'')}" id="cmdSort"  rendered="{!isSortableField[colItem]}" reRender="mainTable">
+                                                     <apex:param value="{!colItem}" name="column" assignTo="{!sortField}" ></apex:param>
+                                                </apex:commandLink>
+                                            </apex:actionRegion>                                       
+                                            <apex:outputLabel value="{!mapFieldToShow[colItem]}" rendered="{!NOT(isSortableField[colItem])}" style="color:grey"/>
+                                        </apex:outputPanel>                                        
+                                    </apex:facet>
+                                    <apex:outputLabel value="{!rowItem[colItem]}"></apex:outputLabel>
+                                </apex:column>
+                            </apex:repeat>
+                        </apex:pageBlockTable>
+                   <apex:outputPanel layout="block" id="otpNav">
+                      <apex:outputText value="[Total Records: {!recordsTotal}]  "></apex:outputText>
+                      <apex:actionRegion ><!---->                   
+                          <apex:commandLink action="{!first}" value="<<First " rendered="{!hasPrevious}" reRender="mainTable"/>
+                      </apex:actionRegion><!---->
+                      <apex:outputText style="color:grey" rendered="{!NOT(hasPrevious)}" value="<<First "/>
+                      <apex:actionRegion ><!---->                   
+                          <apex:commandLink action="{!previous}" value="<Previous" rendered="{!hasPrevious}" reRender="mainTable"/>
+                      </apex:actionRegion><!---->
+                      <apex:outputText style="color:grey" rendered="{!NOT(hasPrevious)}" value="<Previous"/>                      
+                      <apex:outputText value=" (Page {!pageNumber} of {!totalPages}) "/>
+                      <apex:actionRegion ><!---->
+                          <apex:commandLink action="{!next}" value="Next>" rendered="{!hasNext}" reRender="mainTable"/>
+                      </apex:actionRegion><!---->
+                      <apex:outputText style="color:grey" rendered="{!NOT(hasNext)}" value="Next>"/>
+                      <apex:actionRegion ><!---->
+                          <apex:commandLink action="{!last}" value=" Last>>" rendered="{!hasNext}" reRender="mainTable"/>
+                      </apex:actionRegion><!---->
+                      <apex:outputText style="color:grey" rendered="{!NOT(hasNext)}" value=" Last>>"/>                           
+                  </apex:outputPanel>
+                <apex:pageBlockSection >
+                    <apex:outputPanel layout="block" id="buttonAction">
+                        <apex:actionRegion rendered="{!seeDefaultButton}">
+                            <button onclick="remotingMethod(); return false;">Delete</button>
+                        </apex:actionRegion>
+                        <apex:repeat value="{!listActions}" var="item" rendered="{!listActions != null}">
+                            <apex:actionRegion >
+                                <button onclick="executeActionMethod('{!item.ActionType}', getListIds()); return false;">{!item.ActionType}</button>                        
+                            </apex:actionRegion>
+                        </apex:repeat>
+                        <apex:actionFunction name="executeActionFunction" action="{!executeAction}" rerender="mainForm">
+                            <apex:param name="firstParam" assignTo="{!actionType}" value=""/>
+                            <apex:param name="secondParam" assignTo="{!listIdsToParser}" value=""/>
+                        </apex:actionFunction>
+                    </apex:outputPanel>
+                </apex:pageBlockSection>
+            </apex:pageBlock>                       
+        </apex:form>
+        <script type="text/javascript"> 
+            $j = jQuery.noConflict();
+            $j(document).ready(function() { 
+                try{
+                  var container = document.getElementById('{!$Component.mainForm.mainTable}');                
+                  if(container){
+                    //alert( $j(container).find("input[type='checkbox'][idrec]:checked").length );
+                  }else{
+                    alert('no exist element');
+                  }
+                }catch(err){
+                  alert(err.message);
+                }
+            });
+            function remotingMethod()
+            {
+                try {
+                    var container = document.getElementById('{!$Component.mainForm.mainTable}');
+                    var arrayId = Array();
+                    
+                    $j(container).find("input[type='checkbox'][idrec]:checked").each(function(){
+                        arrayId.push( $j(this).attr('idrec') );
+                    });
+                    if(arrayId.length > 0) {
+                        Visualforce.remoting.Manager.invokeAction(
+                             '{!$RemoteAction.ControllerTableObject.processChecked}',
+                             arrayId,
+                             function(result, event){
+                                 if(event.status) {
+                                     if(!result){
+                                         alert('Not checked');
+                                     }else{
+                                         location.reload();
+                                     }
+                                 }                    
+                             },
+                             {escape: true}
+                        );
+                    } else {
+                        alert("Select one o various rows");
+                    }
+                } catch (err) {
+                    alert(err.message);
+                }               
+            }            
+            function checkAll(obj){
+                try{
+                    var container = document.getElementById('{!$Component.mainForm.mainTable}');
+                    $j(container).find("input[type='checkbox'][idrec]").attr('checked', obj.checked);
+                }catch(e){
+                    alert(e);
+                }
+            }
+            function executeActionMethod(typeAction, listIds) {
+                if(listIds.length > 0) {
+                    var joinIds = listIds.join(',');
+                    executeActionFunction(typeAction, joinIds);
+                } else {
+                    alert("Select one o various rows");
+                }
+            }
+            function getListIds() {
+                var container = document.getElementById('{!$Component.mainForm.mainTable}');
+                var arrayId = Array();                    
+                $j(container).find("input[type='checkbox'][idrec]:checked").each(function(){
+                    arrayId.push( $j(this).attr('idrec') );
+                });
+                return arrayId;
+            }
+        </script>
+</apex:component>
